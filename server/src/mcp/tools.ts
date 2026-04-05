@@ -218,19 +218,23 @@ export function registerTools(server: McpServer, userId: number): void {
         lat: z.number().optional(),
         lng: z.number().optional(),
         address: z.string().max(500).optional(),
+        category_id: z.number().int().positive().optional().describe('Category ID — use list_categories to see available options'),
+        google_place_id: z.string().optional().describe('Google Place ID from search_place — enables opening hours display'),
+        osm_id: z.string().optional().describe('OpenStreetMap ID from search_place (e.g. "way:12345") — enables opening hours if no Google ID'),
         notes: z.string().max(2000).optional(),
         website: z.string().max(500).optional(),
         phone: z.string().max(50).optional(),
       },
     },
-    async ({ tripId, placeId, name, description, lat, lng, address, notes, website, phone }) => {
+    async ({ tripId, placeId, name, description, lat, lng, address, category_id, google_place_id, osm_id, notes, website, phone }) => {
       if (isDemoUser(userId)) return demoDenied();
       if (!canAccessTrip(tripId, userId)) return noAccess();
       const existing = db.prepare('SELECT * FROM places WHERE id = ? AND trip_id = ?').get(placeId, tripId) as Record<string, unknown> | undefined;
       if (!existing) return { content: [{ type: 'text' as const, text: 'Place not found.' }], isError: true };
       db.prepare(`
         UPDATE places SET
-          name = ?, description = ?, lat = ?, lng = ?, address = ?, notes = ?, website = ?, phone = ?,
+          name = ?, description = ?, lat = ?, lng = ?, address = ?, category_id = ?, google_place_id = ?, osm_id = ?,
+          notes = ?, website = ?, phone = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(
@@ -239,6 +243,9 @@ export function registerTools(server: McpServer, userId: number): void {
         lat !== undefined ? lat : existing.lat,
         lng !== undefined ? lng : existing.lng,
         address !== undefined ? address : existing.address,
+        category_id !== undefined ? category_id : existing.category_id,
+        google_place_id !== undefined ? google_place_id : existing.google_place_id,
+        osm_id !== undefined ? osm_id : existing.osm_id,
         notes !== undefined ? notes : existing.notes,
         website !== undefined ? website : existing.website,
         phone !== undefined ? phone : existing.phone,
