@@ -369,16 +369,18 @@ export async function importGoogleList(tripId: string, url: string) {
   }
 
   // Parse place data from items
-  const places: { name: string; lat: number; lng: number; notes: string | null }[] = [];
+  const places: { name: string; lat: number; lng: number; notes: string | null; google_place_id: string | null }[] = [];
   for (const item of items) {
     const coords = item?.[1]?.[5];
     const lat = coords?.[2];
     const lng = coords?.[3];
     const name = item?.[2];
     const note = item?.[3] || null;
+    const rawPlaceId = item?.[1]?.[0];
+    const google_place_id = typeof rawPlaceId === 'string' && rawPlaceId.length > 0 ? rawPlaceId : null;
 
     if (name && typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
-      places.push({ name, lat, lng, notes: note || null });
+      places.push({ name, lat, lng, notes: note || null, google_place_id });
     }
   }
 
@@ -386,22 +388,37 @@ export async function importGoogleList(tripId: string, url: string) {
     return { error: 'No places with coordinates found in list', status: 400 };
   }
 
-  // Insert places into trip
+  // Insert places into trip, skipping duplicates
   const insertStmt = db.prepare(`
-    INSERT INTO places (trip_id, name, lat, lng, notes, transport_mode)
-    VALUES (?, ?, ?, ?, ?, 'walking')
+    INSERT INTO places (trip_id, name, lat, lng, notes, google_place_id, transport_mode)
+    VALUES (?, ?, ?, ?, ?, ?, 'walking')
   `);
+  // Pre-load existing places for the trip once to avoid N+1 queries during deduplication
+  const existing = db.prepare(`SELECT google_place_id, lower(name) as lname FROM places WHERE trip_id = ?`).all(tripId) as { google_place_id: string | null; lname: string }[];
+  const existingGoogleIds = new Set(existing.map(r => r.google_place_id).filter(Boolean));
+  const existingNames = new Set(existing.map(r => r.lname));
   const created: any[] = [];
+  let skipped = 0;
   const insertAll = db.transaction(() => {
     for (const p of places) {
-      const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.notes);
+      const isDuplicate = p.google_place_id
+        ? existingGoogleIds.has(p.google_place_id)
+        : existingNames.has(p.name.toLowerCase());
+      if (isDuplicate) {
+        skipped++;
+        continue;
+      }
+      const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.notes, p.google_place_id);
+      // Track newly inserted entries so they are also considered for deduplication within the same import
+      if (p.google_place_id) existingGoogleIds.add(p.google_place_id);
+      existingNames.add(p.name.toLowerCase());
       const place = getPlaceWithTags(Number(result.lastInsertRowid));
       created.push(place);
     }
   });
   insertAll();
 
-  return { places: created, listName };
+  return { places: created, listName, skipped };
 }
 
 // ---------------------------------------------------------------------------

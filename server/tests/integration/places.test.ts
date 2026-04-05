@@ -1,11 +1,12 @@
 /**
  * Places API integration tests.
- * Covers PLACE-001 through PLACE-019.
+ * Covers PLACE-001 through PLACE-020.
  *
  * Notes:
  * - PLACE-008/009: place-to-day assignment is tested in assignments.test.ts
  * - PLACE-014: reordering within a day is tested in assignments.test.ts
  * - PLACE-019: GPX bulk import tested here using the test fixture
+ * - PLACE-020: Google Maps list import tested here
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
@@ -42,6 +43,10 @@ vi.mock('../../src/config', () => ({
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
   updateJwtSecret: () => {},
 }));
+
+const fetchMock = vi.hoisted(() => vi.fn());
+
+vi.mock('node-fetch', () => ({ default: fetchMock }));
 
 import { createApp } from '../../src/app';
 import { createTables } from '../../src/db/schema';
@@ -526,5 +531,158 @@ describe('GPX Import', () => {
       .post(`/api/trips/${trip.id}/places/import/gpx`)
       .set('Cookie', authCookie(user.id));
     expect(res.status).toBe(400);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Google Maps list import (PLACE-020)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function makeGoogleListResponse(listName: string, items: Array<{ placeId: string | null; lat: number; lng: number; name: string; note?: string | null }>) {
+  const parsedItems = items.map(({ placeId, lat, lng, name, note = null }) => {
+    const inner = new Array(6).fill(null);
+    inner[0] = placeId;
+    inner[5] = [null, null, lat, lng];
+    return [null, inner, name, note];
+  });
+  const meta = new Array(9).fill(null);
+  meta[4] = listName;
+  meta[8] = parsedItems;
+  return `)]}'\n${JSON.stringify([[...meta]])}\n`;
+}
+
+describe('Google Maps list import', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it('PLACE-020 — POST /import/google-list without URL returns 400', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('PLACE-020 — POST /import/google-list with invalid URL returns 400', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/not-a-list' });
+    expect(res.status).toBe(400);
+  });
+
+  it('PLACE-020 — POST /import/google-list sets google_place_id on imported places', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve(makeGoogleListResponse('My List', [
+        { placeId: 'ChIJTestPlace001', lat: 48.8566, lng: 2.3522, name: 'Eiffel Tower' },
+        { placeId: 'ChIJTestPlace002', lat: 48.8606, lng: 2.3376, name: 'Louvre Museum' },
+      ])),
+    });
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/placelists/list/TESTLIST123' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.count).toBe(2);
+    expect(res.body.listName).toBe('My List');
+    expect(res.body.places[0].google_place_id).toBe('ChIJTestPlace001');
+    expect(res.body.places[1].google_place_id).toBe('ChIJTestPlace002');
+  });
+
+  it('PLACE-020 — POST /import/google-list deduplicates by google_place_id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const mockResponse = makeGoogleListResponse('My List', [
+      { placeId: 'ChIJTestPlace001', lat: 48.8566, lng: 2.3522, name: 'Eiffel Tower' },
+      { placeId: 'ChIJTestPlace002', lat: 48.8606, lng: 2.3376, name: 'Louvre Museum' },
+    ]);
+
+    fetchMock.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(mockResponse) });
+    const res1 = await request(app)
+      .post(`/api/trips/${trip.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/placelists/list/TESTLIST123' });
+    expect(res1.status).toBe(201);
+    expect(res1.body.count).toBe(2);
+    expect(res1.body.skipped).toBe(0);
+
+    // Re-import the same list — both places should be skipped
+    fetchMock.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(mockResponse) });
+    const res2 = await request(app)
+      .post(`/api/trips/${trip.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/placelists/list/TESTLIST123' });
+    expect(res2.status).toBe(201);
+    expect(res2.body.count).toBe(0);
+    expect(res2.body.skipped).toBe(2);
+  });
+
+  it('PLACE-020 — POST /import/google-list deduplicates by name when no google_place_id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const mockResponse = makeGoogleListResponse('My List', [
+      { placeId: null, lat: 48.8566, lng: 2.3522, name: 'Eiffel Tower' },
+    ]);
+
+    fetchMock.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(mockResponse) });
+    const res1 = await request(app)
+      .post(`/api/trips/${trip.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/placelists/list/TESTLIST456' });
+    expect(res1.status).toBe(201);
+    expect(res1.body.count).toBe(1);
+
+    // Re-import — place with same name should be skipped
+    fetchMock.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(mockResponse) });
+    const res2 = await request(app)
+      .post(`/api/trips/${trip.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/placelists/list/TESTLIST456' });
+    expect(res2.status).toBe(201);
+    expect(res2.body.count).toBe(0);
+    expect(res2.body.skipped).toBe(1);
+  });
+
+  it('PLACE-020 — POST /import/google-list does not deduplicate across different trips', async () => {
+    const { user } = createUser(testDb);
+    const trip1 = createTrip(testDb, user.id);
+    const trip2 = createTrip(testDb, user.id);
+
+    const mockResponse = makeGoogleListResponse('My List', [
+      { placeId: 'ChIJTestPlace001', lat: 48.8566, lng: 2.3522, name: 'Eiffel Tower' },
+    ]);
+
+    fetchMock.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(mockResponse) });
+    const res1 = await request(app)
+      .post(`/api/trips/${trip1.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/placelists/list/TESTLIST789' });
+    expect(res1.status).toBe(201);
+    expect(res1.body.count).toBe(1);
+
+    // Same place in a different trip should be imported (not deduplicated)
+    fetchMock.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(mockResponse) });
+    const res2 = await request(app)
+      .post(`/api/trips/${trip2.id}/places/import/google-list`)
+      .set('Cookie', authCookie(user.id))
+      .send({ url: 'https://www.google.com/maps/placelists/list/TESTLIST789' });
+    expect(res2.status).toBe(201);
+    expect(res2.body.count).toBe(1);
+    expect(res2.body.skipped).toBe(0);
   });
 });

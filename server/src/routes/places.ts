@@ -89,7 +89,7 @@ router.post('/import/google-list', authenticate, requireTripAccess, async (req: 
       return res.status(result.status).json({ error: result.error });
     }
 
-    res.status(201).json({ places: result.places, count: result.places.length, listName: result.listName });
+    res.status(201).json({ places: result.places, count: result.places.length, listName: result.listName, skipped: result.skipped });
     for (const place of result.places) {
       broadcast(tripId, 'place:created', { place }, req.headers['x-socket-id'] as string);
     }
