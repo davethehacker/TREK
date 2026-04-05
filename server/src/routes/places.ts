@@ -61,7 +61,8 @@ router.post('/import/gpx', authenticate, requireTripAccess, gpxUpload.single('fi
   const file = (req as any).file;
   if (!file) return res.status(400).json({ error: 'No file uploaded' });
 
-  const created = importGpx(tripId, file.buffer);
+  const categoryId = req.body.category_id ? Number(req.body.category_id) : null;
+  const created = importGpx(tripId, file.buffer, categoryId);
   if (!created) {
     return res.status(400).json({ error: 'No waypoints found in GPX file' });
   }
@@ -79,11 +80,13 @@ router.post('/import/google-list', authenticate, requireTripAccess, async (req: 
     return res.status(403).json({ error: 'No permission' });
 
   const { tripId } = req.params;
-  const { url } = req.body;
+  const { url, category_id } = req.body;
   if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL is required' });
 
+  const categoryId = category_id ? Number(category_id) : null;
+
   try {
-    const result = await importGoogleList(tripId, url);
+    const result = await importGoogleList(tripId, url, categoryId);
 
     if ('error' in result) {
       return res.status(result.status).json({ error: result.error });

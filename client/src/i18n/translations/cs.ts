@@ -796,6 +796,7 @@ const cs: Record<string, string | { name: string; category: string }[]> = {
   'places.importGoogleList': 'Google Seznam',
   'places.googleListHint': 'Vložte sdílený odkaz na seznam Google Maps pro import všech míst.',
   'places.googleListImported': '{count} míst importováno ze seznamu "{list}"',
+  'places.importAssignCategory': 'Přiřadit do kategorie (volitelné)',
   'places.googleListError': 'Import seznamu Google Maps se nezdařil',
   'places.viewDetails': 'Zobrazit detaily',
   'places.assignToDay': 'Přidat do kterého dne?',
@@ -1546,4 +1547,4 @@ const cs: Record<string, string | { name: string; category: string }[]> = {
   'notifications.test.tripText': 'Testovací oznámení pro výlet "{trip}".',
 }
 
-export default cs
+export default cs

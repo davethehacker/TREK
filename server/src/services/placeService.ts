@@ -244,7 +244,7 @@ export function deletePlace(tripId: string, placeId: string): boolean {
 // Import GPX
 // ---------------------------------------------------------------------------
 
-export function importGpx(tripId: string, fileBuffer: Buffer) {
+export function importGpx(tripId: string, fileBuffer: Buffer, categoryId?: number | null) {
   const xml = fileBuffer.toString('utf-8');
 
   const waypoints: { name: string; lat: number; lng: number; description: string | null; routeGeometry?: string }[] = [];
@@ -297,13 +297,13 @@ export function importGpx(tripId: string, fileBuffer: Buffer) {
   }
 
   const insertStmt = db.prepare(`
-    INSERT INTO places (trip_id, name, description, lat, lng, transport_mode, route_geometry)
-    VALUES (?, ?, ?, ?, ?, 'walking', ?)
+    INSERT INTO places (trip_id, name, description, lat, lng, transport_mode, route_geometry, category_id)
+    VALUES (?, ?, ?, ?, ?, 'walking', ?, ?)
   `);
   const created: any[] = [];
   const insertAll = db.transaction(() => {
     for (const wp of waypoints) {
-      const result = insertStmt.run(tripId, wp.name, wp.description, wp.lat, wp.lng, wp.routeGeometry || null);
+      const result = insertStmt.run(tripId, wp.name, wp.description, wp.lat, wp.lng, wp.routeGeometry || null, categoryId || null);
       const place = getPlaceWithTags(Number(result.lastInsertRowid));
       created.push(place);
     }
@@ -317,7 +317,7 @@ export function importGpx(tripId: string, fileBuffer: Buffer) {
 // Import Google Maps list
 // ---------------------------------------------------------------------------
 
-export async function importGoogleList(tripId: string, url: string) {
+export async function importGoogleList(tripId: string, url: string, categoryId?: number | null) {
   let listId: string | null = null;
   let resolvedUrl = url;
 
@@ -388,13 +388,13 @@ export async function importGoogleList(tripId: string, url: string) {
 
   // Insert places into trip
   const insertStmt = db.prepare(`
-    INSERT INTO places (trip_id, name, lat, lng, notes, transport_mode)
-    VALUES (?, ?, ?, ?, ?, 'walking')
+    INSERT INTO places (trip_id, name, lat, lng, notes, transport_mode, category_id)
+    VALUES (?, ?, ?, ?, ?, 'walking', ?)
   `);
   const created: any[] = [];
   const insertAll = db.transaction(() => {
     for (const p of places) {
-      const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.notes);
+      const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.notes, categoryId || null);
       const place = getPlaceWithTags(Number(result.lastInsertRowid));
       created.push(place);
     }

@@ -794,6 +794,7 @@ const ru: Record<string, string> = {
   'places.importGoogleList': 'Список Google',
   'places.googleListHint': 'Вставьте ссылку на общий список Google Maps для импорта всех мест.',
   'places.googleListImported': '{count} мест импортировано из "{list}"',
+  'places.importAssignCategory': 'Назначить категорию (необязательно)',
   'places.googleListError': 'Не удалось импортировать список Google Maps',
   'places.viewDetails': 'Подробности',
   'places.urlResolved': 'Место импортировано из URL',
@@ -1542,4 +1543,4 @@ const ru: Record<string, string> = {
   'notifications.test.tripText': 'Тестовое уведомление для поездки "{trip}".',
 }
 
-export default ru
+export default ru

@@ -794,6 +794,7 @@ const nl: Record<string, string> = {
   'places.importGoogleList': 'Google Lijst',
   'places.googleListHint': 'Plak een gedeelde Google Maps lijstlink om alle plaatsen te importeren.',
   'places.googleListImported': '{count} plaatsen geimporteerd uit "{list}"',
+  'places.importAssignCategory': 'Toewijzen aan categorie (optioneel)',
   'places.googleListError': 'Google Maps lijst importeren mislukt',
   'places.viewDetails': 'Details bekijken',
   'places.urlResolved': 'Plaats geïmporteerd van URL',
@@ -1542,4 +1543,4 @@ const nl: Record<string, string> = {
   'notifications.test.tripText': 'Testmelding voor reis "{trip}".',
 }
 
-export default nl
+export default nl

@@ -794,6 +794,7 @@ const zh: Record<string, string> = {
   'places.importGoogleList': 'Google 列表',
   'places.googleListHint': '粘贴共享的 Google Maps 列表链接以导入所有地点。',
   'places.googleListImported': '已从"{list}"导入 {count} 个地点',
+  'places.importAssignCategory': '分配到分类（可选）',
   'places.googleListError': 'Google Maps 列表导入失败',
   'places.viewDetails': '查看详情',
   'places.urlResolved': '已从 URL 导入地点',
@@ -1542,4 +1543,4 @@ const zh: Record<string, string> = {
   'notifications.test.tripText': '行程"{trip}"的测试通知。',
 }
 
-export default zh
+export default zh

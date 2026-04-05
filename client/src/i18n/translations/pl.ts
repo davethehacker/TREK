@@ -1427,6 +1427,7 @@ const pl: Record<string, string | { name: string; category: string }[]> = {
   'places.importGoogleList': 'Lista Google',
   'places.googleListHint': 'Wklej link do listy Google Maps.',
   'places.googleListImported': 'Zaimportowano {count} miejsc',
+  'places.importAssignCategory': 'Przypisz do kategorii (opcjonalnie)',
   'places.googleListError': 'Nie udało się zaimportować listy',
   'places.viewDetails': 'Zobacz szczegóły',
   'inspector.trackStats': 'Statystyki trasy',

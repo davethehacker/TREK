@@ -794,6 +794,7 @@ const fr: Record<string, string> = {
   'places.importGoogleList': 'Liste Google',
   'places.googleListHint': 'Collez un lien de liste Google Maps partagée pour importer tous les lieux.',
   'places.googleListImported': '{count} lieux importés depuis "{list}"',
+  'places.importAssignCategory': 'Attribuer à une catégorie (optionnel)',
   'places.googleListError': 'Impossible d\'importer la liste Google Maps',
   'places.viewDetails': 'Voir les détails',
   'places.urlResolved': 'Lieu importé depuis l\'URL',
@@ -1542,4 +1543,4 @@ const fr: Record<string, string> = {
   'notifications.test.tripText': 'Notification de test pour le voyage "{trip}".',
 }
 
-export default fr
+export default fr

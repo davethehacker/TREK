@@ -797,6 +797,7 @@ const ar: Record<string, string | { name: string; category: string }[]> = {
   'places.importGoogleList': 'قائمة Google',
   'places.googleListHint': 'الصق رابط قائمة Google Maps المشتركة لاستيراد جميع الأماكن.',
   'places.googleListImported': 'تم استيراد {count} أماكن من "{list}"',
+  'places.importAssignCategory': 'تعيين إلى فئة (اختياري)',
   'places.googleListError': 'فشل استيراد قائمة Google Maps',
   'places.viewDetails': 'عرض التفاصيل',
   'places.urlResolved': 'تم استيراد المكان من الرابط',
@@ -1546,4 +1547,4 @@ const ar: Record<string, string | { name: string; category: string }[]> = {
   'notifications.test.tripText': 'إشعار تجريبي للرحلة "{trip}".',
 }
 
-export default ar
+export default ar

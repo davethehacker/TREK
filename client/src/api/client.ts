@@ -100,12 +100,13 @@ export const placesApi = {
   update: (tripId: number | string, id: number | string, data: Record<string, unknown>) => apiClient.put(`/trips/${tripId}/places/${id}`, data).then(r => r.data),
   delete: (tripId: number | string, id: number | string) => apiClient.delete(`/trips/${tripId}/places/${id}`).then(r => r.data),
   searchImage: (tripId: number | string, id: number | string) => apiClient.get(`/trips/${tripId}/places/${id}/image`).then(r => r.data),
-  importGpx: (tripId: number | string, file: File) => {
+  importGpx: (tripId: number | string, file: File, categoryId?: number | string | null) => {
     const fd = new FormData(); fd.append('file', file)
+    if (categoryId) fd.append('category_id', String(categoryId))
     return apiClient.post(`/trips/${tripId}/places/import/gpx`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
   },
-  importGoogleList: (tripId: number | string, url: string) =>
-    apiClient.post(`/trips/${tripId}/places/import/google-list`, { url }).then(r => r.data),
+  importGoogleList: (tripId: number | string, url: string, categoryId?: number | string | null) =>
+    apiClient.post(`/trips/${tripId}/places/import/google-list`, { url, category_id: categoryId || null }).then(r => r.data),
 }
 
 export const assignmentsApi = {

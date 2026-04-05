@@ -796,6 +796,7 @@ const hu: Record<string, string | { name: string; category: string }[]> = {
   'places.importGoogleList': 'Google Lista',
   'places.googleListHint': 'Illessz be egy megosztott Google Maps lista linket az osszes hely importalasahoz.',
   'places.googleListImported': '{count} hely importalva a(z) "{list}" listabol',
+  'places.importAssignCategory': 'Kategóriához rendelés (opcionális)',
   'places.googleListError': 'Google Maps lista importalasa sikertelen',
   'places.viewDetails': 'Részletek megtekintése',
   'places.assignToDay': 'Melyik naphoz adod?',
@@ -1543,4 +1544,4 @@ const hu: Record<string, string | { name: string; category: string }[]> = {
   'notifications.test.tripText': 'Teszt értesítés a(z) "{trip}" utazáshoz.',
 }
 
-export default hu
+export default hu

@@ -796,6 +796,7 @@ const de: Record<string, string | { name: string; category: string }[]> = {
   'places.importGoogleList': 'Google Liste',
   'places.googleListHint': 'Geteilten Google Maps Listen-Link einfügen, um alle Orte zu importieren.',
   'places.googleListImported': '{count} Orte aus "{list}" importiert',
+  'places.importAssignCategory': 'Kategorie zuweisen (optional)',
   'places.googleListError': 'Google Maps Liste konnte nicht importiert werden',
   'places.viewDetails': 'Details anzeigen',
   'places.assignToDay': 'Zu welchem Tag hinzufügen?',
@@ -1543,4 +1544,4 @@ const de: Record<string, string | { name: string; category: string }[]> = {
   'notifications.test.tripText': 'Testbenachrichtigung für Reise "{trip}".',
 }
 
-export default de
+export default de

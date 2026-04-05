@@ -49,8 +49,16 @@ const PlacesSidebar = React.memo(function PlacesSidebar({
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
+    setGpxPendingFile(file)
+    setGpxCategoryId('')
+    setGpxCategoryOpen(true)
+  }
+
+  const handleGpxImportConfirm = async () => {
+    if (!gpxPendingFile) return
+    setGpxCategoryOpen(false)
     try {
-      const result = await placesApi.importGpx(tripId, file)
+      const result = await placesApi.importGpx(tripId, gpxPendingFile, gpxCategoryId || null)
       await loadTrip(tripId)
       toast.success(t('places.gpxImported', { count: result.count }))
       if (result.places?.length > 0) {
@@ -64,22 +72,31 @@ const PlacesSidebar = React.memo(function PlacesSidebar({
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.error || t('places.gpxError'))
+    } finally {
+      setGpxPendingFile(null)
+      setGpxCategoryId('')
     }
   }
 
   const [googleListOpen, setGoogleListOpen] = useState(false)
   const [googleListUrl, setGoogleListUrl] = useState('')
   const [googleListLoading, setGoogleListLoading] = useState(false)
+  const [googleListCategoryId, setGoogleListCategoryId] = useState('')
+
+  const [gpxPendingFile, setGpxPendingFile] = useState<File | null>(null)
+  const [gpxCategoryOpen, setGpxCategoryOpen] = useState(false)
+  const [gpxCategoryId, setGpxCategoryId] = useState('')
 
   const handleGoogleListImport = async () => {
     if (!googleListUrl.trim()) return
     setGoogleListLoading(true)
     try {
-      const result = await placesApi.importGoogleList(tripId, googleListUrl.trim())
+      const result = await placesApi.importGoogleList(tripId, googleListUrl.trim(), googleListCategoryId || null)
       await loadTrip(tripId)
       toast.success(t('places.googleListImported', { count: result.count, list: result.listName }))
       setGoogleListOpen(false)
       setGoogleListUrl('')
+      setGoogleListCategoryId('')
       if (result.places?.length > 0) {
         const importedIds: number[] = result.places.map((p: { id: number }) => p.id)
         pushUndo?.(t('undo.importGoogleList'), async () => {
@@ -449,7 +466,7 @@ const PlacesSidebar = React.memo(function PlacesSidebar({
       )}
       {googleListOpen && ReactDOM.createPortal(
         <div
-          onClick={() => { setGoogleListOpen(false); setGoogleListUrl('') }}
+          onClick={() => { setGoogleListOpen(false); setGoogleListUrl(''); setGoogleListCategoryId('') }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
         >
           <div
@@ -476,9 +493,29 @@ const PlacesSidebar = React.memo(function PlacesSidebar({
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
             />
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                {t('places.importAssignCategory')}
+              </div>
+              <select
+                value={googleListCategoryId}
+                onChange={e => setGoogleListCategoryId(e.target.value)}
+                style={{
+                  width: '100%', padding: '9px 12px', borderRadius: 10,
+                  border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)',
+                  fontSize: 13, color: 'var(--text-primary)', outline: 'none',
+                  fontFamily: 'inherit', boxSizing: 'border-box', cursor: 'pointer',
+                }}
+              >
+                <option value="">{t('places.noCategory')}</option>
+                {categories.map(c => (
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
+              </select>
+            </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => { setGoogleListOpen(false); setGoogleListUrl('') }}
+                onClick={() => { setGoogleListOpen(false); setGoogleListUrl(''); setGoogleListCategoryId('') }}
                 style={{
                   padding: '8px 16px', borderRadius: 10, border: '1px solid var(--border-primary)',
                   background: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 500,
@@ -499,6 +536,68 @@ const PlacesSidebar = React.memo(function PlacesSidebar({
                 }}
               >
                 {googleListLoading ? t('common.loading') : t('common.import')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {gpxCategoryOpen && ReactDOM.createPortal(
+        <div
+          onClick={() => { setGpxCategoryOpen(false); setGpxPendingFile(null); setGpxCategoryId('') }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+              {t('places.importGpx')}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 16 }}>
+              {gpxPendingFile?.name}
+            </div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                {t('places.importAssignCategory')}
+              </div>
+              <select
+                value={gpxCategoryId}
+                onChange={e => setGpxCategoryId(e.target.value)}
+                autoFocus
+                style={{
+                  width: '100%', padding: '9px 12px', borderRadius: 10,
+                  border: '1px solid var(--border-primary)', background: 'var(--bg-tertiary)',
+                  fontSize: 13, color: 'var(--text-primary)', outline: 'none',
+                  fontFamily: 'inherit', boxSizing: 'border-box', cursor: 'pointer',
+                }}
+              >
+                <option value="">{t('places.noCategory')}</option>
+                {categories.map(c => (
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setGpxCategoryOpen(false); setGpxPendingFile(null); setGpxCategoryId('') }}
+                style={{
+                  padding: '8px 16px', borderRadius: 10, border: '1px solid var(--border-primary)',
+                  background: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleGpxImportConfirm}
+                style={{
+                  padding: '8px 16px', borderRadius: 10, border: 'none',
+                  background: 'var(--accent)', color: 'var(--accent-text)',
+                  fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {t('common.import')}
               </button>
             </div>
           </div>
